@@ -47,54 +47,12 @@
         }
     </style>
     <!-- Firebase App (the core Firebase SDK) -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <!-- Add Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1 id="title">HỌC TỪ VỰNG</h1>
+    <script type="module">
+      
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        <div>
-            <h2>Add a Word</h2>
-            <input type="text" id="word" placeholder="Word (Từ)">
-            <input type="text" id="meaning" placeholder="Meaning (Nghĩa)">
-            <input type="text" id="synonyms" placeholder="Synonyms (Từ đồng nghĩa, cách nhau bằng dấu phẩy)">
-            <button onclick="addWord()">Add Word</button>
-        </div>
-
-        <div>
-            <h2>Random Word</h2>
-            <button onclick="randomWord()">Show Random Word</button>
-            <p id="randomWord"></p>
-        </div>
-
-        <div>
-            <h2>Search Word</h2>
-            <input type="text" id="searchWord" placeholder="Search">
-            <button onclick="searchWord()">Search</button>
-            <div id="searchResult"></div>
-        </div>
-
-        <div>
-            <h2>Dictionary</h2>
-            <button onclick="showDictionary()">Show Dictionary</button>
-            <table id="dictionary">
-                <thead>
-                <tr>
-                    <th onclick="sortDictionary('word')">Word (Từ)</th>
-                    <th onclick="sortDictionary('meaning')">Meaning (Nghĩa)</th>
-                    <th onclick="sortDictionary('synonyms')">Synonyms (Từ đồng nghĩa)</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-  
         const firebaseConfig = {
             apiKey: "AIzaSyCuKzg5W_f6Rcm9S0BZymSijvmRSRNI4nI",
             authDomain: "watson-cc972.firebaseapp.com",
@@ -106,39 +64,40 @@
         };
 
 
-        firebase.initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
 
-   
-        const db = firebase.firestore();
-
-        function addWord() {
+        async function addWord() {
             const word = document.getElementById("word").value.trim();
             const meaning = document.getElementById("meaning").value.trim();
             let synonyms = document.getElementById("synonyms").value.split(",").map((s) => s.trim());
 
-            
+            // Remove duplicate synonyms and filter out empty strings
             synonyms = [...new Set(synonyms)].filter((s) => s !== "");
 
             if (word && meaning) {
-                db.collection("vocabulary").doc(word).set({
-                    meaning: meaning,
-                    synonyms: synonyms
-                }).then(() => {
+                try {
+                    await setDoc(doc(db, "vocabulary", word), {
+                        meaning: meaning,
+                        synonyms: synonyms
+                    });
                     alert("Word added successfully!");
                     document.getElementById("word").value = "";
                     document.getElementById("meaning").value = "";
                     document.getElementById("synonyms").value = "";
                     showDictionary();
-                }).catch((error) => {
+                } catch (error) {
                     console.error("Error adding word: ", error);
-                });
+                }
             } else {
                 alert("Please enter word, meaning, and synonyms.");
             }
         }
 
-        function randomWord() {
-            db.collection("vocabulary").get().then((querySnapshot) => {
+        async function randomWord() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "vocabulary"));
                 if (querySnapshot.empty) {
                     document.getElementById("randomWord").innerText = "No words available.";
                     return;
@@ -152,19 +111,24 @@
                     }
                     counter++;
                 });
-            });
+            } catch (error) {
+                console.error("Error getting random word: ", error);
+            }
         }
 
-        function searchWord() {
+        async function searchWord() {
             const searchWord = document.getElementById("searchWord").value.toLowerCase().trim();
             const searchResultDiv = document.getElementById("searchResult");
             searchResultDiv.innerHTML = "";
 
-            db.collection("vocabulary").doc(searchWord).get().then((doc) => {
-                if (doc.exists) {
-                    const result = doc.data();
+            try {
+                const docRef = doc(db, "vocabulary", searchWord);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const result = docSnap.data();
                     const wordElement = document.createElement("p");
-                    wordElement.innerText = `Word: ${doc.id}`;
+                    wordElement.innerText = `Word: ${docSnap.id}`;
 
                     const meaningElement = document.createElement("p");
                     meaningElement.innerText = `Meaning: ${result.meaning}`;
@@ -179,29 +143,31 @@
 
                     const updateButton = document.createElement("button");
                     updateButton.innerText = "Update Synonyms";
-                    updateButton.onclick = function () {
+                    updateButton.onclick = async function () {
                         result.synonyms = editSynonymsInput.value.split(",").map((s) => s.trim());
                         result.synonyms = [...new Set(result.synonyms)].filter((s) => s !== "");
-                        db.collection("vocabulary").doc(doc.id).update({
-                            synonyms: result.synonyms
-                        }).then(() => {
+                        try {
+                            await updateDoc(docRef, {
+                                synonyms: result.synonyms
+                            });
                             alert("Synonyms updated successfully!");
                             synonymsElement.innerText = `Synonyms: ${result.synonyms.join(", ")}`;
-                        }).catch((error) => {
+                        } catch (error) {
                             console.error("Error updating synonyms: ", error);
-                        });
+                        }
                     };
 
                     const deleteButton = document.createElement("button");
                     deleteButton.innerText = "Delete";
-                    deleteButton.onclick = function () {
-                        db.collection("vocabulary").doc(doc.id).delete().then(() => {
+                    deleteButton.onclick = async function () {
+                        try {
+                            await deleteDoc(docRef);
                             alert("Word deleted successfully!");
                             searchResultDiv.innerHTML = "";
                             showDictionary();
-                        }).catch((error) => {
+                        } catch (error) {
                             console.error("Error deleting word: ", error);
-                        });
+                        }
                     };
 
                     searchResultDiv.appendChild(wordElement);
@@ -213,16 +179,17 @@
                 } else {
                     searchResultDiv.innerText = "Word not found.";
                 }
-            }).catch((error) => {
-                console.error("Error getting document: ", error);
-            });
+            } catch (error) {
+                console.error("Error searching word: ", error);
+            }
         }
 
-        function showDictionary() {
+        async function showDictionary() {
             const dictionary = document.getElementById("dictionary").querySelector("tbody");
             dictionary.innerHTML = "";
 
-            db.collection("vocabulary").get().then((querySnapshot) => {
+            try {
+                const querySnapshot = await getDocs(collection(db, "vocabulary"));
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const tr = document.createElement("tr");
@@ -273,69 +240,9 @@
 
                     dictionary.appendChild(tr);
                 });
-            });
-        }
-
-        function sortDictionary(key) {
-            db.collection("vocabulary").orderBy(key).get().then((querySnapshot) => {
-                const sortedVocabulary = [];
-                querySnapshot.forEach((doc) => {
-                    sortedVocabulary.push({ id: doc.id, ...doc.data() });
-                });
-
-                const dictionary = document.getElementById("dictionary").querySelector("tbody");
-                dictionary.innerHTML = "";
-
-                sortedVocabulary.forEach((item) => {
-                    const tr = document.createElement("tr");
-
-                    const wordTd = document.createElement("td");
-                    wordTd.innerText = item.id;
-                    tr.appendChild(wordTd);
-
-                    const meaningTd = document.createElement("td");
-                    meaningTd.innerText = item.meaning;
-                    tr.appendChild(meaningTd);
-
-                    const synonymsTd = document.createElement("td");
-                    synonymsTd.innerText = item.synonyms.join(", ");
-                    tr.appendChild(synonymsTd);
-
-                    const actionsTd = document.createElement("td");
-
-                    const editButton = document.createElement("button");
-                    editButton.innerText = "Edit";
-                    editButton.onclick = function () {
-                        const newWord = prompt("Edit word:", item.id);
-                        const newMeaning = prompt("Edit meaning:", item.meaning);
-                        const newSynonyms = prompt("Edit synonyms (comma separated):", item.synonyms.join(", "));
-                        if (newWord && newMeaning) {
-                            db.collection("vocabulary").doc(item.id).delete().then(() => {
-                                db.collection("vocabulary").doc(newWord).set({
-                                    meaning: newMeaning,
-                                    synonyms: newSynonyms.split(",").map((s) => s.trim()).filter((s) => s !== "")
-                                }).then(() => {
-                                    showDictionary();
-                                });
-                            });
-                        }
-                    };
-
-                    const deleteButton = document.createElement("button");
-                    deleteButton.innerText = "Delete";
-                    deleteButton.onclick = function () {
-                        db.collection("vocabulary").doc(item.id).delete().then(() => {
-                            showDictionary();
-                        });
-                    };
-
-                    actionsTd.appendChild(editButton);
-                    actionsTd.appendChild(deleteButton);
-                    tr.appendChild(actionsTd);
-
-                    dictionary.appendChild(tr);
-                });
-            });
+            } catch (error) {
+                console.error("Error getting dictionary: ", error);
+            }
         }
 
         function changeTitleColor() {
@@ -350,8 +257,49 @@
 
         changeTitleColor();
 
-
         showDictionary();
     </script>
+</head>
+<body>
+    <div class="container">
+        <h1 id="title">HỌC TỪ VỰNG</h1>
+
+        <div>
+            <h2>Add a Word</h2>
+            <input type="text" id="word" placeholder="Word (Từ)">
+            <input type="text" id="meaning" placeholder="Meaning (Nghĩa)">
+            <input type="text" id="synonyms" placeholder="Synonyms (Từ đồng nghĩa, cách nhau bằng dấu phẩy)">
+            <button onclick="addWord()">Add Word</button>
+        </div>
+
+        <div>
+            <h2>Random Word</h2>
+            <button onclick="randomWord()">Show Random Word</button>
+            <p id="randomWord"></p>
+        </div>
+
+        <div>
+            <h2>Search Word</h2>
+            <input type="text" id="searchWord" placeholder="Search">
+            <button onclick="searchWord()">Search</button>
+            <div id="searchResult"></div>
+        </div>
+
+        <div>
+            <h2>Dictionary</h2>
+            <button onclick="showDictionary()">Show Dictionary</button>
+            <table id="dictionary">
+                <thead>
+                <tr>
+                    <th onclick="sortDictionary('word')">Word (Từ)</th>
+                    <th onclick="sortDictionary('meaning')">Meaning (Nghĩa)</th>
+                    <th onclick="sortDictionary('synonyms')">Synonyms (Từ đồng nghĩa)</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>
