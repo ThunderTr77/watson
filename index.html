@@ -48,6 +48,10 @@
         cursor: pointer;
       }
     </style>
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js"></script>
   </head>
   <body>
     <div class="container">
@@ -98,7 +102,19 @@
     </div>
 
     <script>
-      let vocabulary = JSON.parse(localStorage.getItem("vocabulary")) || [];
+      const firebaseConfig = {
+        apiKey: "AIzaSyCuKzg5W_f6Rcm9S0BZymSijvmRSRNI4nI",
+        authDomain: "watson-cc972.firebaseapp.com",
+        projectId: "watson-cc972",
+        storageBucket: "watson-cc972.appspot.com",
+        messagingSenderId: "264473981603",
+        appId: "1:264473981603:web:4e65de7aa69416f9f28516",
+        measurementId: "G-DMY45F954G",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+
+      const db = firebase.firestore();
 
       function addWord() {
         const word = document.getElementById("word").value.trim();
@@ -108,41 +124,53 @@
           .value.split(",")
           .map((s) => s.trim());
 
-        // Remove duplicate synonyms and filter out empty strings
         synonyms = [...new Set(synonyms)].filter((s) => s !== "");
 
         if (word && meaning) {
-          const existingWordIndex = vocabulary.findIndex(
-            (item) => item.word.toLowerCase() === word.toLowerCase()
-          );
-          if (existingWordIndex === -1) {
-            vocabulary.push({ word, meaning, synonyms });
-            alert("Word added successfully!");
-            localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
-          } else {
-            alert("Word already exists in the dictionary.");
-          }
-          document.getElementById("word").value = "";
-          document.getElementById("meaning").value = "";
-          document.getElementById("synonyms").value = "";
+          db.collection("vocabulary")
+            .doc(word)
+            .set({
+              meaning: meaning,
+              synonyms: synonyms,
+            })
+            .then(() => {
+              alert("Word added successfully!");
+              document.getElementById("word").value = "";
+              document.getElementById("meaning").value = "";
+              document.getElementById("synonyms").value = "";
+              showDictionary();
+            })
+            .catch((error) => {
+              console.error("Error adding word: ", error);
+            });
         } else {
           alert("Please enter word, meaning, and synonyms.");
         }
       }
 
       function randomWord() {
-        if (vocabulary.length === 0) {
-          document.getElementById("randomWord").innerText =
-            "No words available.";
-          return;
-        }
-        const randomIndex = Math.floor(Math.random() * vocabulary.length);
-        const randomWord = vocabulary[randomIndex];
-        document.getElementById("randomWord").innerText = `Word: ${
-          randomWord.word
-        }, Meaning: ${randomWord.meaning}, Synonyms: ${randomWord.synonyms.join(
-          ", "
-        )}`;
+        db.collection("vocabulary")
+          .get()
+          .then((querySnapshot) => {
+            if (querySnapshot.empty) {
+              document.getElementById("randomWord").innerText =
+                "No words available.";
+              return;
+            }
+            const randomIndex = Math.floor(Math.random() * querySnapshot.size);
+            let counter = 0;
+            querySnapshot.forEach((doc) => {
+              if (counter === randomIndex) {
+                const randomWord = doc.data();
+                document.getElementById("randomWord").innerText = `Word: ${
+                  doc.id
+                }, Meaning: ${
+                  randomWord.meaning
+                }, Synonyms: ${randomWord.synonyms.join(", ")}`;
+              }
+              counter++;
+            });
+          });
       }
 
       function searchWord() {
@@ -150,64 +178,85 @@
           .getElementById("searchWord")
           .value.toLowerCase()
           .trim();
-        const result = vocabulary.find(
-          (item) => item.word.toLowerCase() === searchWord
-        );
         const searchResultDiv = document.getElementById("searchResult");
         searchResultDiv.innerHTML = "";
 
-        if (result) {
-          const wordElement = document.createElement("p");
-          wordElement.innerText = `Word: ${result.word}`;
+        db.collection("vocabulary")
+          .doc(searchWord)
+          .get()
+          .then((doc) => {
+            if (doc.exists) {
+              const result = doc.data();
+              const wordElement = document.createElement("p");
+              wordElement.innerText = `Word: ${doc.id}`;
 
-          const meaningElement = document.createElement("p");
-          meaningElement.innerText = `Meaning: ${result.meaning}`;
+              const meaningElement = document.createElement("p");
+              meaningElement.innerText = `Meaning: ${result.meaning}`;
 
-          const synonymsElement = document.createElement("p");
-          synonymsElement.innerText = `Synonyms: ${result.synonyms.join(", ")}`;
+              const synonymsElement = document.createElement("p");
+              synonymsElement.innerText = `Synonyms: ${result.synonyms.join(
+                ", "
+              )}`;
 
-          const editSynonymsInput = document.createElement("input");
-          editSynonymsInput.type = "text";
-          editSynonymsInput.value = result.synonyms.join(", ");
-          editSynonymsInput.placeholder = "Edit Synonyms";
+              const editSynonymsInput = document.createElement("input");
+              editSynonymsInput.type = "text";
+              editSynonymsInput.value = result.synonyms.join(", ");
+              editSynonymsInput.placeholder = "Edit Synonyms";
 
-          const updateButton = document.createElement("button");
-          updateButton.innerText = "Update Synonyms";
-          updateButton.onclick = function () {
-            result.synonyms = editSynonymsInput.value
-              .split(",")
-              .map((s) => s.trim());
-            result.synonyms = [...new Set(result.synonyms)].filter(
-              (s) => s !== ""
-            );
-            alert("Synonyms updated successfully!");
-            localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
-            synonymsElement.innerText = `Synonyms: ${result.synonyms.join(
-              ", "
-            )}`;
-          };
+              const updateButton = document.createElement("button");
+              updateButton.innerText = "Update Synonyms";
+              updateButton.onclick = function () {
+                result.synonyms = editSynonymsInput.value
+                  .split(",")
+                  .map((s) => s.trim());
+                result.synonyms = [...new Set(result.synonyms)].filter(
+                  (s) => s !== ""
+                );
+                db.collection("vocabulary")
+                  .doc(doc.id)
+                  .update({
+                    synonyms: result.synonyms,
+                  })
+                  .then(() => {
+                    alert("Synonyms updated successfully!");
+                    synonymsElement.innerText = `Synonyms: ${result.synonyms.join(
+                      ", "
+                    )}`;
+                  })
+                  .catch((error) => {
+                    console.error("Error updating synonyms: ", error);
+                  });
+              };
 
-          const deleteButton = document.createElement("button");
-          deleteButton.innerText = "Delete";
-          deleteButton.onclick = function () {
-            const index = vocabulary.indexOf(result);
-            if (index > -1) {
-              vocabulary.splice(index, 1);
-              localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
-              alert("Word deleted successfully!");
-              searchResultDiv.innerHTML = "";
+              const deleteButton = document.createElement("button");
+              deleteButton.innerText = "Delete";
+              deleteButton.onclick = function () {
+                db.collection("vocabulary")
+                  .doc(doc.id)
+                  .delete()
+                  .then(() => {
+                    alert("Word deleted successfully!");
+                    searchResultDiv.innerHTML = "";
+                    showDictionary();
+                  })
+                  .catch((error) => {
+                    console.error("Error deleting word: ", error);
+                  });
+              };
+
+              searchResultDiv.appendChild(wordElement);
+              searchResultDiv.appendChild(meaningElement);
+              searchResultDiv.appendChild(synonymsElement);
+              searchResultDiv.appendChild(editSynonymsInput);
+              searchResultDiv.appendChild(updateButton);
+              searchResultDiv.appendChild(deleteButton);
+            } else {
+              searchResultDiv.innerText = "Word not found.";
             }
-          };
-
-          searchResultDiv.appendChild(wordElement);
-          searchResultDiv.appendChild(meaningElement);
-          searchResultDiv.appendChild(synonymsElement);
-          searchResultDiv.appendChild(editSynonymsInput);
-          searchResultDiv.appendChild(updateButton);
-          searchResultDiv.appendChild(deleteButton);
-        } else {
-          searchResultDiv.innerText = "Word not found.";
-        }
+          })
+          .catch((error) => {
+            console.error("Error getting document: ", error);
+          });
       }
 
       function showDictionary() {
@@ -215,67 +264,158 @@
           .getElementById("dictionary")
           .querySelector("tbody");
         dictionary.innerHTML = "";
-        vocabulary.forEach((item, index) => {
-          const tr = document.createElement("tr");
 
-          const wordTd = document.createElement("td");
-          wordTd.innerText = item.word;
-          tr.appendChild(wordTd);
+        db.collection("vocabulary")
+          .get()
+          .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              const tr = document.createElement("tr");
 
-          const meaningTd = document.createElement("td");
-          meaningTd.innerText = item.meaning;
-          tr.appendChild(meaningTd);
+              const wordTd = document.createElement("td");
+              wordTd.innerText = doc.id;
+              tr.appendChild(wordTd);
 
-          const synonymsTd = document.createElement("td");
-          synonymsTd.innerText = item.synonyms.join(", ");
-          tr.appendChild(synonymsTd);
+              const meaningTd = document.createElement("td");
+              meaningTd.innerText = data.meaning;
+              tr.appendChild(meaningTd);
 
-          const actionsTd = document.createElement("td");
+              const synonymsTd = document.createElement("td");
+              synonymsTd.innerText = data.synonyms.join(", ");
+              tr.appendChild(synonymsTd);
 
-          const editButton = document.createElement("button");
-          editButton.innerText = "Edit";
-          editButton.onclick = function () {
-            const newWord = prompt("Edit word:", item.word);
-            const newMeaning = prompt("Edit meaning:", item.meaning);
-            const newSynonyms = prompt(
-              "Edit synonyms (comma separated):",
-              item.synonyms.join(", ")
-            );
-            if (newWord && newMeaning) {
-              item.word = newWord.trim();
-              item.meaning = newMeaning.trim();
-              item.synonyms = newSynonyms
-                .split(",")
-                .map((s) => s.trim())
-                .filter((s) => s !== "");
-              localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
-              showDictionary();
-            }
-          };
+              const actionsTd = document.createElement("td");
 
-          const deleteButton = document.createElement("button");
-          deleteButton.innerText = "Delete";
-          deleteButton.onclick = function () {
-            vocabulary.splice(index, 1);
-            localStorage.setItem("vocabulary", JSON.stringify(vocabulary));
-            showDictionary();
-          };
+              const editButton = document.createElement("button");
+              editButton.innerText = "Edit";
+              editButton.onclick = function () {
+                const newWord = prompt("Edit word:", doc.id);
+                const newMeaning = prompt("Edit meaning:", data.meaning);
+                const newSynonyms = prompt(
+                  "Edit synonyms (comma separated):",
+                  data.synonyms.join(", ")
+                );
+                if (newWord && newMeaning) {
+                  db.collection("vocabulary")
+                    .doc(doc.id)
+                    .delete()
+                    .then(() => {
+                      db.collection("vocabulary")
+                        .doc(newWord)
+                        .set({
+                          meaning: newMeaning,
+                          synonyms: newSynonyms
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter((s) => s !== ""),
+                        })
+                        .then(() => {
+                          showDictionary();
+                        });
+                    });
+                }
+              };
 
-          actionsTd.appendChild(editButton);
-          actionsTd.appendChild(deleteButton);
-          tr.appendChild(actionsTd);
+              const deleteButton = document.createElement("button");
+              deleteButton.innerText = "Delete";
+              deleteButton.onclick = function () {
+                db.collection("vocabulary")
+                  .doc(doc.id)
+                  .delete()
+                  .then(() => {
+                    showDictionary();
+                  });
+              };
 
-          dictionary.appendChild(tr);
-        });
+              actionsTd.appendChild(editButton);
+              actionsTd.appendChild(deleteButton);
+              tr.appendChild(actionsTd);
+
+              dictionary.appendChild(tr);
+            });
+          });
       }
 
       function sortDictionary(key) {
-        vocabulary.sort((a, b) => {
-          if (a[key].toLowerCase() < b[key].toLowerCase()) return -1;
-          if (a[key].toLowerCase() > b[key].toLowerCase()) return 1;
-          return 0;
-        });
-        showDictionary();
+        db.collection("vocabulary")
+          .orderBy(key)
+          .get()
+          .then((querySnapshot) => {
+            const sortedVocabulary = [];
+            querySnapshot.forEach((doc) => {
+              sortedVocabulary.push({ id: doc.id, ...doc.data() });
+            });
+
+            const dictionary = document
+              .getElementById("dictionary")
+              .querySelector("tbody");
+            dictionary.innerHTML = "";
+
+            sortedVocabulary.forEach((item) => {
+              const tr = document.createElement("tr");
+
+              const wordTd = document.createElement("td");
+              wordTd.innerText = item.id;
+              tr.appendChild(wordTd);
+
+              const meaningTd = document.createElement("td");
+              meaningTd.innerText = item.meaning;
+              tr.appendChild(meaningTd);
+
+              const synonymsTd = document.createElement("td");
+              synonymsTd.innerText = item.synonyms.join(", ");
+              tr.appendChild(synonymsTd);
+
+              const actionsTd = document.createElement("td");
+
+              const editButton = document.createElement("button");
+              editButton.innerText = "Edit";
+              editButton.onclick = function () {
+                const newWord = prompt("Edit word:", item.id);
+                const newMeaning = prompt("Edit meaning:", item.meaning);
+                const newSynonyms = prompt(
+                  "Edit synonyms (comma separated):",
+                  item.synonyms.join(", ")
+                );
+                if (newWord && newMeaning) {
+                  db.collection("vocabulary")
+                    .doc(item.id)
+                    .delete()
+                    .then(() => {
+                      db.collection("vocabulary")
+                        .doc(newWord)
+                        .set({
+                          meaning: newMeaning,
+                          synonyms: newSynonyms
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter((s) => s !== ""),
+                        })
+                        .then(() => {
+                          showDictionary();
+                        });
+                    });
+                }
+              };
+
+              const deleteButton = document.createElement("button");
+              deleteButton.innerText = "Delete";
+              deleteButton.onclick = function () {
+                db.collection("vocabulary")
+                  .doc(item.id)
+                  .delete()
+                  .then(() => {
+                    showDictionary();
+                  });
+              };
+
+              actionsTd.appendChild(editButton);
+              actionsTd.appendChild(deleteButton);
+              tr.appendChild(actionsTd);
+
+              dictionary.appendChild(tr);
+            });
+          });
       }
 
       function changeTitleColor() {
@@ -290,7 +430,6 @@
 
       changeTitleColor();
 
-      // Hiển thị từ điển khi tải trang
       showDictionary();
     </script>
   </body>
