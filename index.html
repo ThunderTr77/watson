@@ -48,10 +48,10 @@
     </style>
     <!-- Firebase App (the core Firebase SDK) -->
     <script type="module">
-      
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCuKzg5W_f6Rcm9S0BZymSijvmRSRNI4nI",
@@ -73,7 +73,7 @@
             const meaning = document.getElementById("meaning").value.trim();
             let synonyms = document.getElementById("synonyms").value.split(",").map((s) => s.trim());
 
-            // Remove duplicate synonyms and filter out empty strings
+           
             synonyms = [...new Set(synonyms)].filter((s) => s !== "");
 
             if (word && meaning) {
@@ -215,8 +215,8 @@
                         const newMeaning = prompt("Edit meaning:", data.meaning);
                         const newSynonyms = prompt("Edit synonyms (comma separated):", data.synonyms.join(", "));
                         if (newWord && newMeaning) {
-                            db.collection("vocabulary").doc(doc.id).delete().then(() => {
-                                db.collection("vocabulary").doc(newWord).set({
+                            deleteDoc(doc(db, "vocabulary", doc.id)).then(() => {
+                                setDoc(doc(db, "vocabulary", newWord), {
                                     meaning: newMeaning,
                                     synonyms: newSynonyms.split(",").map((s) => s.trim()).filter((s) => s !== "")
                                 }).then(() => {
@@ -229,7 +229,7 @@
                     const deleteButton = document.createElement("button");
                     deleteButton.innerText = "Delete";
                     deleteButton.onclick = function () {
-                        db.collection("vocabulary").doc(doc.id).delete().then(() => {
+                        deleteDoc(doc(db, "vocabulary", doc.id)).then(() => {
                             showDictionary();
                         });
                     };
@@ -257,6 +257,7 @@
 
         changeTitleColor();
 
+       
         showDictionary();
     </script>
 </head>
