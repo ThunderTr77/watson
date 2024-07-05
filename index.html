@@ -48,11 +48,12 @@
     </style>
     <!-- Firebase App (the core Firebase SDK) -->
     <script type="module">
-
+        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
         import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCuKzg5W_f6Rcm9S0BZymSijvmRSRNI4nI",
             authDomain: "watson-cc972.firebaseapp.com",
@@ -63,17 +64,17 @@
             measurementId: "G-DMY45F954G"
         };
 
-
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        async function addWord() {
+        window.addWord = async function addWord() {
             const word = document.getElementById("word").value.trim();
             const meaning = document.getElementById("meaning").value.trim();
             let synonyms = document.getElementById("synonyms").value.split(",").map((s) => s.trim());
 
-           
+            // Remove duplicate synonyms and filter out empty strings
             synonyms = [...new Set(synonyms)].filter((s) => s !== "");
 
             if (word && meaning) {
@@ -95,7 +96,7 @@
             }
         }
 
-        async function randomWord() {
+        window.randomWord = async function randomWord() {
             try {
                 const querySnapshot = await getDocs(collection(db, "vocabulary"));
                 if (querySnapshot.empty) {
@@ -116,7 +117,7 @@
             }
         }
 
-        async function searchWord() {
+        window.searchWord = async function searchWord() {
             const searchWord = document.getElementById("searchWord").value.toLowerCase().trim();
             const searchResultDiv = document.getElementById("searchResult");
             searchResultDiv.innerHTML = "";
@@ -184,7 +185,7 @@
             }
         }
 
-        async function showDictionary() {
+        window.showDictionary = async function showDictionary() {
             const dictionary = document.getElementById("dictionary").querySelector("tbody");
             dictionary.innerHTML = "";
 
@@ -257,7 +258,7 @@
 
         changeTitleColor();
 
-       
+        // Hiển thị từ điển khi tải trang
         showDictionary();
     </script>
 </head>
