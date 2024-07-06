@@ -24,12 +24,16 @@
             border-radius: 10px;
             max-width: 600px;
             text-align: center;
+            overflow: auto; /* This allows the container to scroll */
+            max-height: 90vh; /* This limits the height of the container */
         }
         input, button {
             margin: 5px 0;
         }
         #dictionary {
             margin-top: 20px;
+            overflow-y: auto; /* This allows the table to scroll vertically */
+            max-height: 400px; /* Adjust the height of the table as needed */
         }
         table {
             width: 100%;
