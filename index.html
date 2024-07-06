@@ -67,6 +67,10 @@
         #backToTopBtn:hover {
             background-color: #333;
         }
+        #wordCount {
+            margin-top: 20px;
+            font-size: 18px;
+        }
     </style>
     <!-- Firebase App (the core Firebase SDK) -->
     <script type="module">
@@ -90,6 +94,12 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
+
+        async function updateWordCount() {
+            const querySnapshot = await getDocs(collection(db, "vocabulary"));
+            const wordCount = querySnapshot.size;
+            document.getElementById("wordCount").innerText = `Số từ hiện tại: ${wordCount}`;
+        }
 
         window.addWord = async function addWord() {
             const word = document.getElementById("word").value.trim();
@@ -263,6 +273,7 @@
 
                     dictionary.appendChild(tr);
                 });
+                updateWordCount();
             } catch (error) {
                 console.error("Error getting dictionary: ", error);
             }
@@ -329,6 +340,7 @@
         <div>
             <h2>Dictionary</h2>
             <button onclick="showDictionary()">Show Dictionary</button>
+            <p id="wordCount">Số từ hiện tại: 0</p>
             <table id="dictionary">
                 <thead>
                 <tr>
