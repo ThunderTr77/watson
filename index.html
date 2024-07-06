@@ -49,6 +49,24 @@
             background-color: #444;
             cursor: pointer;
         }
+        #backToTopBtn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 30px;
+            z-index: 99;
+            font-size: 18px;
+            border: none;
+            outline: none;
+            background-color: #555;
+            color: white;
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        #backToTopBtn:hover {
+            background-color: #333;
+        }
     </style>
     <!-- Firebase App (the core Firebase SDK) -->
     <script type="module">
@@ -264,6 +282,23 @@
 
         // Hiển thị từ điển khi tải trang
         showDictionary();
+
+        // Show button when scrolling down
+        window.onscroll = function() {scrollFunction()};
+
+        function scrollFunction() {
+            const backToTopBtn = document.getElementById("backToTopBtn");
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                backToTopBtn.style.display = "block";
+            } else {
+                backToTopBtn.style.display = "none";
+            }
+        }
+
+        window.backToTop = function backToTop() {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        }
     </script>
 </head>
 <body>
@@ -307,5 +342,6 @@
             </table>
         </div>
     </div>
+    <button id="backToTopBtn" onclick="backToTop()">Lên Đầu Trang</button>
 </body>
 </html>
