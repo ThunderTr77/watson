@@ -24,16 +24,16 @@
             border-radius: 10px;
             max-width: 600px;
             text-align: center;
-            overflow: auto; /* This allows the container to scroll */
-            max-height: 90vh; /* This limits the height of the container */
+            overflow: auto;
+            max-height: 90vh;
         }
         input, button {
             margin: 5px 0;
         }
         #dictionary {
             margin-top: 20px;
-            overflow-y: auto; /* This allows the table to scroll vertically */
-            max-height: 400px; /* Adjust the height of the table as needed */
+            overflow-y: auto;
+            max-height: 400px;
         }
         table {
             width: 100%;
@@ -72,14 +72,11 @@
             font-size: 18px;
         }
     </style>
-    <!-- Firebase App (the core Firebase SDK) -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics.js";
         import { getFirestore, collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCuKzg5W_f6Rcm9S0BZymSijvmRSRNI4nI",
             authDomain: "watson-cc972.firebaseapp.com",
@@ -90,7 +87,6 @@
             measurementId: "G-DMY45F954G"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
@@ -104,17 +100,13 @@
         window.addWord = async function addWord() {
             const word = document.getElementById("word").value.trim();
             const meaning = document.getElementById("meaning").value.trim();
-            let synonyms = document.getElementById("synonyms").value.split(",").map((s) => s.trim());
+            let synonyms = document.getElementById("synonyms").value.split(",").map(s => s.trim());
 
-            // Remove duplicate synonyms and filter out empty strings
-            synonyms = [...new Set(synonyms)].filter((s) => s !== "");
+            synonyms = [...new Set(synonyms)].filter(s => s !== "");
 
             if (word && meaning) {
                 try {
-                    await setDoc(doc(db, "vocabulary", word), {
-                        meaning: meaning,
-                        synonyms: synonyms
-                    });
+                    await setDoc(doc(db, "vocabulary", word), { meaning, synonyms });
                     alert("Word added successfully!");
                     document.getElementById("word").value = "";
                     document.getElementById("meaning").value = "";
@@ -126,7 +118,7 @@
             } else {
                 alert("Please enter word, meaning, and synonyms.");
             }
-        }
+        };
 
         window.randomWord = async function randomWord() {
             try {
@@ -137,7 +129,7 @@
                 }
                 const randomIndex = Math.floor(Math.random() * querySnapshot.size);
                 let counter = 0;
-                querySnapshot.forEach((doc) => {
+                querySnapshot.forEach(doc => {
                     if (counter === randomIndex) {
                         const randomWord = doc.data();
                         document.getElementById("randomWord").innerText = `Word: ${doc.id}, Meaning: ${randomWord.meaning}, Synonyms: ${randomWord.synonyms.join(", ")}`;
@@ -147,7 +139,7 @@
             } catch (error) {
                 console.error("Error getting random word: ", error);
             }
-        }
+        };
 
         window.searchWord = async function searchWord() {
             const searchWord = document.getElementById("searchWord").value.toLowerCase().trim();
@@ -177,12 +169,10 @@
                     const updateButton = document.createElement("button");
                     updateButton.innerText = "Update Synonyms";
                     updateButton.onclick = async function () {
-                        result.synonyms = editSynonymsInput.value.split(",").map((s) => s.trim());
-                        result.synonyms = [...new Set(result.synonyms)].filter((s) => s !== "");
+                        result.synonyms = editSynonymsInput.value.split(",").map(s => s.trim());
+                        result.synonyms = [...new Set(result.synonyms)].filter(s => s !== "");
                         try {
-                            await updateDoc(docRef, {
-                                synonyms: result.synonyms
-                            });
+                            await updateDoc(docRef, { synonyms: result.synonyms });
                             alert("Synonyms updated successfully!");
                             synonymsElement.innerText = `Synonyms: ${result.synonyms.join(", ")}`;
                         } catch (error) {
@@ -196,7 +186,6 @@
                         try {
                             await deleteDoc(docRef);
                             alert("Word deleted successfully!");
-                            searchResultDiv.innerHTML = "";
                             showDictionary();
                         } catch (error) {
                             console.error("Error deleting word: ", error);
@@ -215,7 +204,7 @@
             } catch (error) {
                 console.error("Error searching word: ", error);
             }
-        }
+        };
 
         window.showDictionary = async function showDictionary() {
             const dictionary = document.getElementById("dictionary").querySelector("tbody");
@@ -223,7 +212,7 @@
 
             try {
                 const querySnapshot = await getDocs(collection(db, "vocabulary"));
-                querySnapshot.forEach((doc) => {
+                querySnapshot.forEach(doc => {
                     const data = doc.data();
                     const tr = document.createElement("tr");
 
@@ -243,19 +232,17 @@
 
                     const editButton = document.createElement("button");
                     editButton.innerText = "Edit";
-                    editButton.onclick = function () {
+                    editButton.onclick = async function () {
                         const newWord = prompt("Edit word:", doc.id);
                         const newMeaning = prompt("Edit meaning:", data.meaning);
                         const newSynonyms = prompt("Edit synonyms (comma separated):", data.synonyms.join(", "));
                         if (newWord && newMeaning) {
-                            deleteDoc(doc(db, "vocabulary", doc.id)).then(() => {
-                                setDoc(doc(db, "vocabulary", newWord), {
-                                    meaning: newMeaning,
-                                    synonyms: newSynonyms.split(",").map((s) => s.trim()).filter((s) => s !== "")
-                                }).then(() => {
-                                    showDictionary();
-                                });
+                            await deleteDoc(doc(db, "vocabulary", doc.id));
+                            await setDoc(doc(db, "vocabulary", newWord), {
+                                meaning: newMeaning,
+                                synonyms: newSynonyms.split(",").map(s => s.trim()).filter(s => s !== "")
                             });
+                            showDictionary();
                         }
                     };
 
@@ -281,7 +268,7 @@
             } catch (error) {
                 console.error("Error getting dictionary: ", error);
             }
-        }
+        };
 
         function changeTitleColor() {
             const title = document.getElementById("title");
@@ -295,11 +282,9 @@
 
         changeTitleColor();
 
-        // Hiển thị từ điển khi tải trang
         showDictionary();
 
-        // Show button when scrolling down
-        window.onscroll = function() {scrollFunction()};
+        window.onscroll = function () { scrollFunction(); };
 
         function scrollFunction() {
             const backToTopBtn = document.getElementById("backToTopBtn");
@@ -313,7 +298,7 @@
         window.backToTop = function backToTop() {
             document.body.scrollTop = 0;
             document.documentElement.scrollTop = 0;
-        }
+        };
     </script>
 </head>
 <body>
@@ -348,9 +333,9 @@
             <table id="dictionary">
                 <thead>
                 <tr>
-                    <th onclick="sortDictionary('word')">Word (Từ)</th>
-                    <th onclick="sortDictionary('meaning')">Meaning (Nghĩa)</th>
-                    <th onclick="sortDictionary('synonyms')">Synonyms (Từ đồng nghĩa)</th>
+                    <th>Word (Từ)</th>
+                    <th>Meaning (Nghĩa)</th>
+                    <th>Synonyms (Từ đồng nghĩa)</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
